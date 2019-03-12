@@ -13,3 +13,4 @@ RUN apk add --update --no-cache \
 
 FROM resource
 LABEL MAINTAINER=lfurrea
+CMD ["check-pr"]
