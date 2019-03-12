@@ -13,13 +13,14 @@ import (
 type Gitrepo struct {
 	Repository    string `env:"GITHUB_REPOSITORY"`
 	AccessToken   string `env:"GITHUB_TOKEN"`
-  WebhookBranch string `env:"CF_BRANCH"`
+	WebhookBranch string `env:"CF_BRANCH"`
 }
 
 type GithubClient struct {
-	V4         *githubv4.Client
-	Repository string
-	Owner      string
+	V4            *githubv4.Client
+	Repository    string
+	Owner         string
+	WebhookBranch string
 }
 
 type PullRequest struct {
@@ -52,15 +53,16 @@ func NewGithubClient(r *Gitrepo) (*GithubClient, error) {
 	v4 = githubv4.NewClient(client)
 
 	return &GithubClient{
-		V4:         v4,
-		Owner:      owner,
-		Repository: repository,
+		V4:            v4,
+		Owner:         owner,
+		Repository:    repository,
+		WebhookBranch: r.WebhookBranch,
 	}, nil
 
 }
 
-//func ListOpenPullRequests(c *GithubClient) ([]*PullRequest, error) {
-func ListOpenPullRequests(c *GithubClient) (string, error) {
+func ListOpenPullRequests(c *GithubClient) ([]*PullRequest, error) {
+	//func ListOpenPullRequests(c *GithubClient) (string, error) {
 	var query struct {
 		Repository struct {
 			PullRequests struct {
@@ -82,23 +84,23 @@ func ListOpenPullRequests(c *GithubClient) (string, error) {
 	}
 
 	var response []*PullRequest
-	res := ""
-	//	for {
+
 	if err := c.V4.Query(context.TODO(), &query, vars); err != nil {
-		return "hello", err
+		return nil, err
 	}
 
 	for _, p := range query.Repository.PullRequests.Edges {
 		response = append(response, &PullRequest{
-			ID:          p.Node.PullRequest.ID,
-			BaseRefName: p.Node.PullRequest.BaseRefName,
-			HeadRefName: p.Node.PullRequest.HeadRefName,
+			ID:          p.Node.ID,
+			BaseRefName: p.Node.BaseRefName,
+			HeadRefName: p.Node.HeadRefName,
 		})
-		res += p.Node.HeadRefName + "-"
-		log.Printf("Branch Name: %s", res)
+		branch := p.Node.HeadRefName
+		id := p.Node.ID
+		log.Printf("Found branch %s with an open PR->id: %s", branch, id)
 	}
-	//	}
-	return res, nil
+
+	return response, nil
 }
 
 func parseRepository(s string) (string, string, error) {
